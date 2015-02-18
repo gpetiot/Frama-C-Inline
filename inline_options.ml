@@ -2,7 +2,7 @@
 module Self = Plugin.Register (struct
   let name = "Inline"
   let shortname = "inline"
-  let help = ""
+  let help = "Inlining of ACSL predicates"
 end)
   
 module Enabled = Self.False (struct
