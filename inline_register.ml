@@ -182,6 +182,10 @@ class inline_inplace = object
 
   method! private vterm t =
     Cil.ChangeTo ((new subst ())#term t [] [] [])
+
+  method! private vglob_aux = function
+    | GAnnot _ -> Cil.ChangeTo []
+    | _ -> Cil.DoChildren
 end
 
 
