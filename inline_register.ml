@@ -27,11 +27,11 @@ let rec app env li lassoc params =
   {env with label_assoc=aux_label [] lassoc;
 	    term_assoc=aux_arg [] (li.l_profile, params);}
 
-and pred env = function
+and pred_node env = function
   | Pfalse -> Pfalse
   | Ptrue -> Ptrue
   | Papp(l,_,_) when List.mem_assoc l.l_var_info env.pred_assoc ->
-     List.assoc l.l_var_info env.pred_assoc
+     (List.assoc l.l_var_info env.pred_assoc).pred_content
   | Papp (li,lassoc,params) as pred' ->
     let new_env = app env li lassoc params in
     begin
@@ -39,28 +39,28 @@ and pred env = function
       | LBnone -> pred' (* TODO *)
       | LBreads _ -> pred' (* TODO *)
       | LBterm _ -> assert false (* unreachable *)
-      | LBpred {content=p} -> pred new_env p
+      | LBpred p -> pred_node new_env p.pred_content
       | LBinductive _ -> pred' (* TODO *)
     end
   | Pseparated t -> Pseparated (List.map (fun x -> term env x) t)
   | Prel(rel,t1,t2) -> Prel(rel, term env t1, term env t2)
-  | Pand(p1,p2) -> Pand(pnamed env p1, pnamed env p2)
-  | Por(p1,p2) -> Por (pnamed env p1, pnamed env p2)
-  | Pxor(p1,p2) -> Pxor(pnamed env p1, pnamed env p2)
-  | Pimplies(p1,p2) -> Pimplies(pnamed env p1, pnamed env p2)
-  | Piff(p1,p2) -> Piff(pnamed env p1, pnamed env p2)
-  | Pnot p -> Pnot (pnamed env p)
-  | Pif (t,p1,p2) -> Pif (term env t, pnamed env p1, pnamed env p2)
-  | Plet (li,{content=p}) as pred' ->
+  | Pand(p1,p2) -> Pand(pred env p1, pred env p2)
+  | Por(p1,p2) -> Por (pred env p1, pred env p2)
+  | Pxor(p1,p2) -> Pxor(pred env p1, pred env p2)
+  | Pimplies(p1,p2) -> Pimplies(pred env p1, pred env p2)
+  | Piff(p1,p2) -> Piff(pred env p1, pred env p2)
+  | Pnot p -> Pnot (pred env p)
+  | Pif (t,p1,p2) -> Pif (term env t, pred env p1, pred env p2)
+  | Plet (li,{pred_content=p}) as pred' ->
     let lv = li.l_var_info in
     begin
       match li.l_body with
       | LBnone -> pred' (* TODO *)
       | LBreads _ -> pred' (* TODO *)
       | LBterm t' ->
-	 pred {env with term_assoc=((lv,(term env t'))::env.term_assoc)} p
-      | LBpred {content=x} ->
-	 pred {env with pred_assoc=((lv,pred env x)::env.pred_assoc)} p
+	 pred_node {env with term_assoc=((lv,(term env t'))::env.term_assoc)} p
+      | LBpred x ->
+	 pred_node {env with pred_assoc=((lv,pred env x)::env.pred_assoc)} p
       | LBinductive _ -> pred' (* TODO *)
     end
   | Pforall (q,p)
@@ -73,13 +73,13 @@ and pred env = function
     let new_q, new_quantifs = aux [] [] q in
     let new_quantifs = List.rev_append new_quantifs env.var_assoc in
     let env = {env with var_assoc=new_quantifs} in
-    let new_p = pnamed env p in
+    let new_p = pred env p in
     begin
       match pred' with
       | Pforall _ -> Pforall (new_q, new_p)
       | _ -> Pexists (new_q, new_p)
     end
-  | Pat (p,l) -> Pat (pnamed env p, label env l)
+  | Pat (p,l) -> Pat (pred env p, label env l)
   | Pvalid_read (l,t) -> Pvalid_read (label env l, term env t)
   | Pvalid (l,t) -> Pvalid (label env l, term env t)
   | Pvalid_function(t) -> Pvalid_function (term env t)
@@ -173,9 +173,7 @@ and toffset env = function
 
 and term env t = {t with term_node=tnode env t.term_node}
 
-and pnamed env p = {p with content=pred env p.content}
-
-and id_pred env p = {p with ip_content=pred env p.ip_content}
+and pred env p = {p with pred_content=pred_node env p.pred_content}
 
 
 
@@ -183,7 +181,7 @@ and id_pred env p = {p with ip_content=pred env p.ip_content}
 class inline_inplace = object
   inherit Visitor.frama_c_inplace
 
-  method! private vpredicate_named p = Cil.ChangeTo (pnamed empty_env p)
+  method! private vpredicate p = Cil.ChangeTo (pred empty_env p)
 
   method! private vterm t = Cil.ChangeTo (term empty_env t)
 
