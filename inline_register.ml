@@ -30,12 +30,11 @@ and pred_node env = function
   | Papp (li, lassoc, params) as pred' -> (
       let new_env = app env li lassoc params in
       match li.l_body with
-      | LBnone -> pred' (* TODO *)
-      | LBreads _ -> pred' (* TODO *)
-      | LBterm _ -> assert false (* unreachable *)
+      | LBnone -> (* TODO *) pred'
+      | LBreads _ -> (* TODO *) pred'
+      | LBterm _ -> (* unreachable *) assert false
       | LBpred p -> pred_node new_env p.pred_content
-      | LBinductive _ -> pred'
-      (* TODO *) )
+      | LBinductive _ -> (* TODO *) pred' )
   | Pseparated t -> Pseparated (List.map (fun x -> term env x) t)
   | Prel (rel, t1, t2) -> Prel (rel, term env t1, term env t2)
   | Pand (p1, p2) -> Pand (pred env p1, pred env p2)
@@ -48,16 +47,15 @@ and pred_node env = function
   | Plet (li, {pred_content= p}) as pred' -> (
       let lv = li.l_var_info in
       match li.l_body with
-      | LBnone -> pred' (* TODO *)
-      | LBreads _ -> pred' (* TODO *)
+      | LBnone -> (* TODO *) pred'
+      | LBreads _ -> (* TODO *) pred'
       | LBterm t' ->
           pred_node
             {env with term_assoc= (lv, term env t') :: env.term_assoc}
             p
       | LBpred x ->
           pred_node {env with pred_assoc= (lv, pred env x) :: env.pred_assoc} p
-      | LBinductive _ -> pred'
-      (* TODO *) )
+      | LBinductive _ -> (* TODO *) pred' )
   | (Pforall (q, p) | Pexists (q, p)) as pred' -> (
       let prefix v = {v with lv_name= "__q_" ^ v.lv_name} in
       let rec aux ret1 ret2 = function
@@ -111,8 +109,8 @@ and tnode env = function
   | TUnOp (u, t) -> TUnOp (u, term env t)
   | TBinOp (b, t1, t2) -> TBinOp (b, term env t1, term env t2)
   | TCastE (ty, t) -> TCastE (ty, term env t)
-  | TAddrOf _ as term' -> term' (* TODO *)
-  | TStartOf _ as term' -> term' (* TODO *)
+  | TAddrOf _ as term' -> (* TODO *) term'
+  | TStartOf _ as term' -> (* TODO *) term'
   | Tapp (li, [], [lower; upper; ({term_node= Tlambda ([_], _)} as lambda)]) ->
       Tapp (li, [], List.map (fun x -> term env x) [lower; upper; lambda])
   | Tapp (li, labels, params) as term' -> (
@@ -123,15 +121,13 @@ and tnode env = function
           let s = li.l_var_info.lv_name in
           if s = "\\cos" || s = "\\abs" || s = "\\sqrt" || s = "\\pow" then
             Tapp (li, List.map snd env.label_assoc, new_terms)
-          else term'
-          (* TODO *)
-      | LBreads _ -> term' (* TODO *)
+          else (* TODO *) term'
+      | LBreads _ -> (* TODO *) term'
       | LBterm {term_node= t} -> tnode env t
-      | LBpred _ -> assert false (* unreachable *)
-      | LBinductive _ -> term'
-      (* TODO *) )
+      | LBpred _ -> (* unreachable *) assert false
+      | LBinductive _ -> (* TODO *) term' )
   | Tlambda (q, t) -> Tlambda (q, term env t)
-  | TDataCons _ as term' -> term' (* TODO *)
+  | TDataCons _ as term' -> (* TODO *) term'
   | Tif (t1, t2, t3) -> Tif (term env t1, term env t2, term env t3)
   | Tat (t, l) -> Tat (term env t, label env l)
   | Tbase_addr (l, t) -> Tbase_addr (label env l, term env t)
@@ -156,14 +152,13 @@ and tnode env = function
   | Tlet (li, {term_node= t}) as term' -> (
       let lv = li.l_var_info in
       match li.l_body with
-      | LBnone -> term' (* TODO *)
-      | LBreads _ -> term' (* TODO *)
+      | LBnone -> (* TODO *) term'
+      | LBreads _ -> (* TODO *) term'
       | LBterm t' ->
           tnode {env with term_assoc= (lv, term env t') :: env.term_assoc} t
       | LBpred _ -> assert false (* unreachable *)
-      | LBinductive _ -> term' )
+      | LBinductive _ -> (* TODO *) term' )
 
-(* TODO *)
 and toffset env = function
   | TNoOffset -> TNoOffset
   | TField (f, o) -> TField (f, toffset env o)
